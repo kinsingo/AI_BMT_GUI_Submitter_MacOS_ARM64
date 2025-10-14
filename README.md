@@ -115,21 +115,6 @@ public:
   ./AI_BMT_GUI_Submitter
   ```
 
-**Run all commands at once (For Initial Build)**
-
-```bash
-# Install dependencies (run only once)
-# brew install cmake ninja
-
-# Build commands
-rm -rf CMakeCache.txt CMakeFiles cmake_install.cmake AI_BMT_GUI_Submitter .cmake
-rm -f build.ninja .ninja_deps .ninja_log
-cmake -G "Ninja" ..
-export DYLD_LIBRARY_PATH=$(pwd)/lib:$DYLD_LIBRARY_PATH
-cmake --build .
-./AI_BMT_GUI_Submitter
-```
-
 **Run all commands at once (For Rebuild)**
 
 - Using following commands in `build/` directory.
