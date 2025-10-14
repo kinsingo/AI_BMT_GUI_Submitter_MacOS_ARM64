@@ -16,7 +16,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 # Link the libraries to the executable (macOS dylib)
-target_link_libraries(AI_BMT_GUI_Submitter PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/build/libAI_BMT_GUI_Library.dylib)
+target_link_libraries(AI_BMT_GUI_Submitter PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/build/lib/libAI_BMT_GUI_Library.dylib)
 
 # Set RPATH to include the lib directory during the build and install phases (macOS)
 set_target_properties(AI_BMT_GUI_Submitter PROPERTIES
