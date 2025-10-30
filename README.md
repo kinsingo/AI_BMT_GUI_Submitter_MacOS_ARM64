@@ -1,4 +1,4 @@
-> **Last Updated:** 2025-10-31 V2
+> **Last Updated:** 2025-10-31
 
 ## Environment
 
