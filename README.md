@@ -1,4 +1,4 @@
-> **Last Updated:** 2025-10-14 (1st Release of macOS)
+> **Last Updated:** 2025-10-31
 
 ## Environment
 
