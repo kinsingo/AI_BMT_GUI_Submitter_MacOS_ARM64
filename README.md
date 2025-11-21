@@ -1,5 +1,4 @@
-> **Last Updated:** 2025-11-20
-
+> **Last Updated:** 2025-11-21 (Version 2.0)
 ## Environment
 
 1.  ISA(Instruction Set Architecture) : ARM64(aarch64)
