@@ -86,7 +86,6 @@ int main(int argc, char *argv[])
         // shared_ptr<AI_BMT_Interface> interface = make_shared<ObjectDetection_CustomDataset_Interface_Implementation>();
         // shared_ptr<AI_BMT_Interface> interface = make_shared<Segmentation_Interface_Implementation>();
         // shared_ptr<AI_BMT_Interface> interface = make_shared<Segmentation_CustomDataset_Interface_Implementation>();
-        // shared_ptr<AI_BMT_Interface> interface = make_shared<LLM_Interface_Implementation>();
         return AI_BMT_GUI_CALLER::call_BMT_GUI_For_Single_Task(argc, argv, interface);
 
         // -- For Multi-Domain Tasks --
@@ -96,7 +95,6 @@ int main(int argc, char *argv[])
             make_shared<ImageClassification_Interface_Implementation>(),
             make_shared<ObjectDetection_Interface_Implementation>(),
             make_shared<Segmentation_Interface_Implementation>(),
-            make_shared<LLM_Interface_Implementation>(),
         };
         return AI_BMT_GUI_CALLER::call_BMT_GUI_For_Multiple_Tasks(argc, argv, interfaceVector);
         */
