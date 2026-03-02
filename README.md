@@ -1,4 +1,5 @@
-> **Last Updated:** 2026-02-09 (Version 2.2)
+> **Last Updated:** 2026-03-03 (Version 2.3)
+
 ## Environment
 
 1.  ISA(Instruction Set Architecture) : ARM64(aarch64)
@@ -59,6 +60,9 @@ public:
    // return the implemented interface task type.
    virtual InterfaceType getInterfaceType() = 0;
 
+   // Power measurement selection (default: do not measure)
+   virtual PowerDeviceType getPowerDeviceType() { return PowerDeviceType::None; }
+
    // This initialize(..) function is guaranteed to be called before preprocess(..) and infer(..) are executed.
    // The submitter can load the model using the provided modelPath
    virtual void initialize(string modelPath) = 0;
@@ -74,7 +78,7 @@ public:
    // - inferLLM: run inference on preprocessed data and return results
    virtual VariantType preprocessLLMData(const LLMPreprocessedInput& llmData) {throw runtime_error("LLMPreprocessedInput(..) should be implemented for llm task");}
    virtual vector<BMTLLMResult> inferLLM(const vector<VariantType>& data) {throw runtime_error("inferLLM(..) should be implemented for llm task");}
-   
+
    // LLM MMLU tasks: first token generation for TTFT measurement
    // - inferFirstToken: generate only the first token (AI-BMT will measure the time internally)
    // - Returns void (we only measure TTFT, don't care about the actual first token output)

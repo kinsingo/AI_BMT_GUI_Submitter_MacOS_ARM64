@@ -41,6 +41,12 @@ public:
             return InterfaceType::ImageClassification;
     }
 
+    // Power measurement selection (default: do not measure)
+    virtual PowerDeviceType getPowerDeviceType() override
+    {
+        return PowerDeviceType::AppleSoC;
+    }
+
     virtual void initialize(string modelPath) override
     {
         // session initializer

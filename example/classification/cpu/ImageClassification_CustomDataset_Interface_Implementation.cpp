@@ -21,20 +21,26 @@ private:
     Env env;
     RunOptions runOptions;
     shared_ptr<Session> session;
-    array<const char*, 1> inputNames;
-    array<const char*, 1> outputNames;
+    array<const char *, 1> inputNames;
+    array<const char *, 1> outputNames;
     MemoryInfo memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
 
 public:
     virtual InterfaceType getInterfaceType() override
     {
-        //return InterfaceType::ImageClassification;
+        // return InterfaceType::ImageClassification;
         return InterfaceType::ImageClassification_CustomDataset;
+    }
+
+    // Power measurement selection (default: do not measure)
+    virtual PowerDeviceType getPowerDeviceType() override
+    {
+        return PowerDeviceType::AppleSoC;
     }
 
     virtual void initialize(string modelPath) override
     {
-        //session initializer
+        // session initializer
         SessionOptions sessionOptions;
         sessionOptions.SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
         sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
@@ -45,8 +51,8 @@ public:
         AllocatorWithDefaultOptions allocator;
         AllocatedStringPtr inputName = session->GetInputNameAllocated(0, allocator);
         AllocatedStringPtr outputName = session->GetOutputNameAllocated(0, allocator);
-        inputNames = { inputName.get() };
-        outputNames = { outputName.get() };
+        inputNames = {inputName.get()};
+        outputNames = {outputName.get()};
         inputName.release();
         outputName.release();
     }
@@ -54,16 +60,16 @@ public:
     virtual Optional_Data getOptionalData() override
     {
         Optional_Data data;
-        data.cpu_type = "Intel(R) Core(TM) i5-14500"; // e.g., Intel i7-9750HF
-        data.accelerator_type = ""; // e.g., DeepX M1(NPU)
-        data.submitter = ""; // e.g., DeepX
-        data.cpu_core_count = "14"; // e.g., 16
-        data.cpu_ram_capacity = ""; // e.g., 32GB
-        data.cooling = ""; // e.g., Air, Liquid, Passive
-        data.cooling_option = ""; // e.g., Active, Passive (Active = with fan/pump, Passive = without fan)
+        data.cpu_type = "Intel(R) Core(TM) i5-14500";     // e.g., Intel i7-9750HF
+        data.accelerator_type = "";                       // e.g., DeepX M1(NPU)
+        data.submitter = "";                              // e.g., DeepX
+        data.cpu_core_count = "14";                       // e.g., 16
+        data.cpu_ram_capacity = "";                       // e.g., 32GB
+        data.cooling = "";                                // e.g., Air, Liquid, Passive
+        data.cooling_option = "";                         // e.g., Active, Passive (Active = with fan/pump, Passive = without fan)
         data.cpu_accelerator_interconnect_interface = ""; // e.g., PCIe Gen5 x16
-        data.benchmark_model = ""; // e.g., ResNet-50
-        data.operating_system = "Windows"; // e.g., Ubuntu 20.04.5 LTS
+        data.benchmark_model = "";                        // e.g., ResNet-50
+        data.operating_system = "Windows";                // e.g., Ubuntu 20.04.5 LTS
         return data;
     }
 
@@ -75,11 +81,13 @@ public:
         int w = image.cols;
         int new_h, new_w;
 
-        if (h < w) {
+        if (h < w)
+        {
             new_h = resize_size;
             new_w = static_cast<int>(w * (resize_size / static_cast<float>(h)));
         }
-        else {
+        else
+        {
             new_w = resize_size;
             new_h = static_cast<int>(h * (resize_size / static_cast<float>(w)));
         }
@@ -94,16 +102,17 @@ public:
         return image(roi).clone(); // ensure data is contiguous
     }
 
-    virtual VariantType preprocessVisionData(const string& imagePath) override
+    virtual VariantType preprocessVisionData(const string &imagePath) override
     {
         Mat image = imread(imagePath);
-        if (image.empty()) {
+        if (image.empty())
+        {
             throw runtime_error("Failed to load image: " + imagePath);
         }
 
         // convert BGR to RGB before reshaping
         cvtColor(image, image, cv::COLOR_BGR2RGB);
-        image = getResizedAndCenterCroppedImage(image);//For Custom Dataset
+        image = getResizedAndCenterCroppedImage(image); // For Custom Dataset
 
         // reshape (3D -> 1D)
         image = image.reshape(1, 1);
@@ -113,8 +122,8 @@ public:
         image.convertTo(vec, CV_32FC1, 1. / 255);
 
         // Mean and Std deviation values
-        const vector<float> means = { 0.485, 0.456, 0.406 };
-        const vector<float> stds = { 0.229, 0.224, 0.225 };
+        const vector<float> means = {0.485, 0.456, 0.406};
+        const vector<float> stds = {0.229, 0.224, 0.225};
 
         // Transpose (Height, Width, Channel)(224,224,3) to (Chanel, Height, Width)(3,224,224)
         vector<float> output;
@@ -129,22 +138,25 @@ public:
         return output;
     }
 
-    virtual vector<BMTVisionResult> inferVision(const vector<VariantType>& data) override
+    virtual vector<BMTVisionResult> inferVision(const vector<VariantType> &data) override
     {
         const int querySize = data.size();
         vector<BMTVisionResult> results;
 
-        //onnx option setting
-        const array<int64_t, 4> inputShape = { 1, 3, 224, 224 };
-        const array<int64_t, 2> outputShape = { 1, 1000 };
+        // onnx option setting
+        const array<int64_t, 4> inputShape = {1, 3, 224, 224};
+        const array<int64_t, 2> outputShape = {1, 1000};
 
-        for (int i = 0; i < querySize; ++i) {
+        for (int i = 0; i < querySize; ++i)
+        {
             // Prepare input/output tensors
             vector<float> imageVec;
-            try {
+            try
+            {
                 imageVec = get<vector<float>>(data[i]);
             }
-            catch (const std::bad_variant_access& e) {
+            catch (const std::bad_variant_access &e)
+            {
                 cerr << "Error: bad_variant_access at index " << i << ". Reason: " << e.what() << endl;
                 continue;
             }
