@@ -1,4 +1,4 @@
-> **Last Updated:** 2026-03-03 (Version 2.3)
+> **Last Updated:** 2026-03-19 (Version 2.4)
 
 ## Environment
 
@@ -133,6 +133,7 @@ rm -rf CMakeCache.txt CMakeFiles cmake_install.cmake AI_BMT_GUI_Submitter .cmake
 rm -f build.ninja .ninja_deps .ninja_log
 cmake -G "Ninja" ..
 export DYLD_LIBRARY_PATH=$(pwd)/lib:$DYLD_LIBRARY_PATH
+export QT_PLUGIN_PATH=$(pwd)/PlugIns
 cmake --build .
 ./AI_BMT_GUI_Submitter
 ```
@@ -143,5 +144,6 @@ cmake --build .
 
 ```bash
 export DYLD_LIBRARY_PATH=$(pwd)/lib:$DYLD_LIBRARY_PATH
+export QT_PLUGIN_PATH=$(pwd)/PlugIns
 ./AI_BMT_GUI_Submitter
 ```
