@@ -46,8 +46,7 @@ public:
         SessionOptions sessionOptions;
         sessionOptions.SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
         sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
-        wstring modelPathwstr(modelPath.begin(), modelPath.end());
-        session = make_shared<Session>(env, modelPathwstr.c_str(), sessionOptions);
+        session = make_shared<Session>(env, modelPath.c_str(), sessionOptions);
 
         // Get input and output names
         AllocatorWithDefaultOptions allocator;
