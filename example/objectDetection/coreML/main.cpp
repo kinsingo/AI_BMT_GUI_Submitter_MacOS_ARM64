@@ -91,14 +91,6 @@ public:
         Optional_Data data;
         data.cpu_type = "Apple M4";                                                          // e.g., Intel i7-9750HF
         data.accelerator_type = isUseMacOSGPU ? "Apple M4 GPU (CoreML)" : "";                // e.g., DeepX M1(NPU)
-        data.submitter = "";                                                                 // e.g., DeepX
-        data.cpu_core_count = "10";                                                          // e.g., 16
-        data.cpu_ram_capacity = "24GB";                                                      // e.g., 32GB
-        data.cooling = "Passive";                                                            // e.g., Air, Liquid, Passive
-        data.cooling_option = "Passive";                                                     // e.g., Active, Passive (Active = with fan/pump, Passive = without fan)
-        data.cpu_accelerator_interconnect_interface = isUseMacOSGPU ? "Unified Memory" : ""; // e.g., PCIe Gen5 x16
-        data.benchmark_model = "";                                                           // e.g., ResNet-50
-        data.operating_system = "macOS 15.5";
         return data;
     }
 

@@ -1,20 +1,41 @@
 #include "ai_bmt_gui_caller.h"
 #include "ai_bmt_interface.h"
+#include <omp.h>
 #include <thread>
 #include <chrono>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <cpu_provider_factory.h>
+#include <onnxruntime_cxx_api.h>
+#include <opencv2/opencv.hpp>
 #include <filesystem>
 
-class Virtual_Submitter_Implementation : public AI_BMT_Interface
+using namespace std;
+using namespace cv;
+using namespace Ort;
+class ObjectDetection_Interface_Implementation : public AI_BMT_Interface
 {
+private:
+    Env env;
+    RunOptions runOptions;
+    shared_ptr<Session> session;
+    array<const char *, 1> inputNames;
+    array<const char *, 1> outputNames;
+    MemoryInfo memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
+    bool isUseMacOSGPU;
+    bool isOpenMPEnabled;
+    vector<int64_t> outputShape; // 자동 감지된 출력 shape
+
 public:
+    // Constructor with GPU usage option
+    explicit ObjectDetection_Interface_Implementation(bool useMacOSGPU = false, bool useOpenMP = true)
+        : isUseMacOSGPU(useMacOSGPU), isOpenMPEnabled(useOpenMP) {}
+
     virtual InterfaceType getInterfaceType() override
     {
-        return InterfaceType::ImageClassification;
-        // return InterfaceType::ImageClassification_CustomDataset;
+        return InterfaceType::ObjectDetection;
     }
 
     // Power measurement selection (default: do not measure)
@@ -25,58 +46,144 @@ public:
 
     virtual void initialize(string modelPath) override
     {
-        // load the model here
+        // session initializer
+        SessionOptions sessionOptions;
+        // Apply GPU acceleration if requested
+        if (isUseMacOSGPU)
+        {
+            try
+            {
+                sessionOptions.AppendExecutionProvider("CoreML");
+                cout << "Using CoreML execution provider for GPU acceleration" << endl;
+            }
+            catch (...)
+            {
+                cout << "CoreML execution provider not available, falling back to CPU" << endl;
+                isUseMacOSGPU = false; // Update flag to reflect actual usage
+            }
+        }
+        session = make_shared<Session>(env, modelPath.c_str(), sessionOptions);
+
+        // Get input and output names
+        AllocatorWithDefaultOptions allocator;
+        AllocatedStringPtr inputName = session->GetInputNameAllocated(0, allocator);
+        AllocatedStringPtr outputName = session->GetOutputNameAllocated(0, allocator);
+        inputNames = {inputName.get()};
+        outputNames = {outputName.get()};
+        inputName.release();
+        outputName.release();
+
+        // 출력 shape 자동 감지
+        TypeInfo outputTypeInfo = session->GetOutputTypeInfo(0);
+        auto tensorInfo = outputTypeInfo.GetTensorTypeAndShapeInfo();
+        outputShape = tensorInfo.GetShape();
+
+        cout << "Detected output shape: [";
+        for (size_t i = 0; i < outputShape.size(); ++i)
+        {
+            cout << outputShape[i];
+            if (i < outputShape.size() - 1)
+                cout << ", ";
+        }
+        cout << "]" << endl;
     }
 
     virtual Optional_Data getOptionalData() override
     {
         Optional_Data data;
-        data.cpu_type = "";                               // e.g., Intel i7-9750HF
-        data.accelerator_type = "";                       // e.g., DeepX M1(NPU)
-        data.submitter = "";                              // e.g., DeepX
-        data.cpu_core_count = "";                         // e.g., 16
-        data.cpu_ram_capacity = "";                       // e.g., 32GB
-        data.cooling = "";                                // e.g., Air, Liquid, Passive
-        data.cooling_option = "";                         // e.g., Active, Passive (Active = with fan/pump, Passive = without fan)
-        data.cpu_accelerator_interconnect_interface = ""; // e.g., PCIe Gen5 x16
-        data.benchmark_model = "";                        // e.g., ResNet-50
-        data.operating_system = "Ubuntu 24.04.5 LTS";     // e.g., Ubuntu 20.04.5 LTS
+        data.cpu_type = "Apple M4";                                                          // e.g., Intel i7-9750HF
+        data.accelerator_type = isUseMacOSGPU ? "Apple M4 GPU (CoreML)" : "";                // e.g., DeepX M1(NPU)
+        data.submitter = "";                                                                 // e.g., DeepX
+        data.cpu_core_count = "10";                                                          // e.g., 16
+        data.cpu_ram_capacity = "24GB";                                                      // e.g., 32GB
+        data.cooling = "Passive";                                                            // e.g., Air, Liquid, Passive
+        data.cooling_option = "Passive";                                                     // e.g., Active, Passive (Active = with fan/pump, Passive = without fan)
+        data.cpu_accelerator_interconnect_interface = isUseMacOSGPU ? "Unified Memory" : ""; // e.g., PCIe Gen5 x16
+        data.benchmark_model = "";                                                           // e.g., ResNet-50
+        data.operating_system = "macOS 15.5";
         return data;
     }
 
     virtual VariantType preprocessVisionData(const string &imagePath) override
     {
-        int *data = new int[200 * 200];
-        for (int i = 0; i < 200 * 200; i++)
-            data[i] = i;
-        return data;
+        // Load padded image
+        Mat image = imread(imagePath);
+        if (image.empty())
+        {
+            cerr << "Image not found at: " << imagePath << endl;
+            throw runtime_error("Image not found!");
+        }
+
+        // Convert to float and normalize
+        Mat floatImg;
+        image.convertTo(floatImg, CV_32FC3, 1.0 / 255.0);
+        cvtColor(floatImg, floatImg, COLOR_BGR2RGB);
+
+        // HWC → CHW
+        vector<Mat> chw;
+        split(floatImg, chw);
+        vector<float> inputTensorValues;
+        for (int c = 0; c < 3; ++c)
+        {
+            inputTensorValues.insert(inputTensorValues.end(),
+                                     (float *)chw[c].datastart, (float *)chw[c].dataend);
+        }
+        return inputTensorValues;
     }
+
+    // virtual vector<BMTVisionResult> inferVision(const vector<VariantType> &data) override
+    // {
+    //     // onnx option setting
+    //     const int querySize = data.size();
+    //     vector<BMTVisionResult> results;
+    //     array<int64_t, 4> inputShape = {1, 3, 640, 640};
+
+    //     // outputShape는 initialize()에서 자동 감지됨
+    //     // 출력 데이터 크기 계산
+    //     size_t outputDataSize = 1;
+    //     for (size_t i = 1; i < outputShape.size(); ++i)
+    //         outputDataSize *= outputShape[i];
+
+    //     for (int i = 0; i < querySize; i++)
+    //     {
+    //         vector<float> imageVec = get<vector<float>>(data[i]);
+    //         vector<float> outputData(outputDataSize);
+    //         auto inputTensor = Ort::Value::CreateTensor<float>(memory_info, imageVec.data(), imageVec.size(), inputShape.data(), inputShape.size());
+    //         auto outputTensor = Value::CreateTensor<float>(memory_info, outputData.data(), outputData.size(), outputShape.data(), outputShape.size());
+
+    //         // Run inference
+    //         session->Run(runOptions, inputNames.data(), &inputTensor, 1, outputNames.data(), &outputTensor, 1);
+
+    //         // Update results
+    //         BMTVisionResult result;
+    //         result.objectDetectionResult = outputData;
+    //         results.push_back(result);
+    //     }
+    //     return results;
+    // }
 
     virtual vector<BMTVisionResult> inferVision(const vector<VariantType> &data) override
     {
-        vector<BMTVisionResult> queryResult;
-        const int querySize = data.size();
-        for (int i = 0; i < querySize; i++)
+        vector<BMTVisionResult> results(data.size());
+        array<int64_t, 4> inputShape = {1, 3, 640, 640};
+
+        // outputShape는 initialize()에서 자동 감지됨
+        // 출력 데이터 크기 계산
+        size_t outputDataSize = 1;
+        for (size_t i = 1; i < outputShape.size(); ++i)
+            outputDataSize *= outputShape[i];
+
+#pragma omp parallel for if (isOpenMPEnabled)
+        for (int i = 0; i < (int)data.size(); ++i)
         {
-            int *realData;
-            try
-            {
-                realData = get<int *>(data[i]); // Ok
-            }
-            catch (const std::bad_variant_access &e)
-            {
-                cerr << "Error: bad_variant_access at index " << i << ". " << "Reason: " << e.what() << endl;
-                continue;
-            }
-
-            BMTVisionResult result;
-            vector<float> outputData(1000, 0.1);
-            result.classProbabilities = outputData;
-            queryResult.push_back(result);
-
-            delete[] realData; // Since realData was created as an unmanaged dynamic array in convertToData(..) in this example, it should be deleted after being used as below.
+            const vector<float> &imageVec = get<vector<float>>(data[i]);
+            vector<float> outputData(outputDataSize);
+            auto inputTensor = Ort::Value::CreateTensor<float>(memory_info, const_cast<float *>(imageVec.data()), imageVec.size(), inputShape.data(), inputShape.size());
+            auto outputTensor = Ort::Value::CreateTensor<float>(memory_info, outputData.data(), outputData.size(), outputShape.data(), outputShape.size());
+            session->Run(runOptions, inputNames.data(), &inputTensor, 1, outputNames.data(), &outputTensor, 1);
+            results[i].objectDetectionResult = std::move(outputData);
         }
-        return queryResult;
+        return results;
     }
 };
 
@@ -84,26 +191,11 @@ int main(int argc, char *argv[])
 {
     try
     {
-        // -- For Single Task --
-        shared_ptr<AI_BMT_Interface> interface = make_shared<Virtual_Submitter_Implementation>();
-        // shared_ptr<AI_BMT_Interface> interface = make_shared<ImageClassification_Interface_Implementation>();
-        // shared_ptr<AI_BMT_Interface> interface = make_shared<ImageClassification_CustomDataset_Interface_Implementation>();
-        // shared_ptr<AI_BMT_Interface> interface = make_shared<ObjectDetection_Interface_Implementation>();
-        // shared_ptr<AI_BMT_Interface> interface = make_shared<ObjectDetection_CustomDataset_Interface_Implementation>();
-        // shared_ptr<AI_BMT_Interface> interface = make_shared<Segmentation_Interface_Implementation>();
-        // shared_ptr<AI_BMT_Interface> interface = make_shared<Segmentation_CustomDataset_Interface_Implementation>();
+        bool useMacOSGPU = true; // Set to true to enable GPU acceleration (CoreML)
+        bool useOpenMP = false;   // Set to true to enable OpenMP parallelization
+        shared_ptr<AI_BMT_Interface> interface = make_shared<ObjectDetection_Interface_Implementation>(useMacOSGPU, useOpenMP);
+        cout << "Starting Object Detection BMT with " << (useMacOSGPU ? "GPU (CoreML)" : "CPU") << " acceleration" << endl;
         return AI_BMT_GUI_CALLER::call_BMT_GUI_For_Single_Task(argc, argv, interface);
-
-        // -- For Multi-Domain Tasks --
-        /*
-        vector<shared_ptr<AI_BMT_Interface>> interfaceVector
-        {
-            make_shared<ImageClassification_Interface_Implementation>(),
-            make_shared<ObjectDetection_Interface_Implementation>(),
-            make_shared<Segmentation_Interface_Implementation>(),
-        };
-        return AI_BMT_GUI_CALLER::call_BMT_GUI_For_Multiple_Tasks(argc, argv, interfaceVector);
-        */
     }
     catch (const exception &ex)
     {

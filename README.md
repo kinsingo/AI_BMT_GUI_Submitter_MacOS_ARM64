@@ -1,4 +1,4 @@
-> **Last Updated:** 2026-04-06 (Version 2.7)
+> **Last Updated:** 2026-05-10 (Version 2.8)
 
 ## Environment
 
@@ -135,7 +135,7 @@ cmake -G "Ninja" ..
 export DYLD_LIBRARY_PATH=$(pwd)/lib:$DYLD_LIBRARY_PATH
 export QT_PLUGIN_PATH=$(pwd)/PlugIns
 cmake --build .
-./AI_BMT_GUI_Submitter
+caffeinate -dims ./AI_BMT_GUI_Submitter
 ```
 
 **Execute AI-BMT App**
@@ -145,7 +145,7 @@ cmake --build .
 ```bash
 export DYLD_LIBRARY_PATH=$(pwd)/lib:$DYLD_LIBRARY_PATH
 export QT_PLUGIN_PATH=$(pwd)/PlugIns
-./AI_BMT_GUI_Submitter
+caffeinate -dims ./AI_BMT_GUI_Submitter
 ```
 
 ### 🔗 Additional Support: Remote GUI Guide
