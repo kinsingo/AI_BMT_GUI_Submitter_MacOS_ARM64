@@ -1,7 +1,7 @@
 [
 {
   "directory": "/Users/shinjonghyun/Desktop/AI_BMT_GUI_Submitter_MacOS_ARM64/build",
-  "command": "/usr/bin/clang++ -I/Users/shinjonghyun/Desktop/AI_BMT_GUI_Submitter_MacOS_ARM64/include -g -std=gnu++17 -arch arm64 -o CMakeFiles/AI_BMT_GUI_Submitter.dir/main.cpp.o -c /Users/shinjonghyun/Desktop/AI_BMT_GUI_Submitter_MacOS_ARM64/main.cpp",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/opt/libomp/include -I/Users/shinjonghyun/Desktop/AI_BMT_GUI_Submitter_MacOS_ARM64/include -I/opt/homebrew/opt/opencv/include/opencv4 -I/Users/shinjonghyun/Desktop/AI_BMT_GUI_Submitter_MacOS_ARM64/onnxruntime-osx-arm64-1.23.1/include -g -std=gnu++17 -arch arm64 -Xpreprocessor -fopenmp -o CMakeFiles/AI_BMT_GUI_Submitter.dir/main.cpp.o -c /Users/shinjonghyun/Desktop/AI_BMT_GUI_Submitter_MacOS_ARM64/main.cpp",
   "file": "/Users/shinjonghyun/Desktop/AI_BMT_GUI_Submitter_MacOS_ARM64/main.cpp",
   "output": "/Users/shinjonghyun/Desktop/AI_BMT_GUI_Submitter_MacOS_ARM64/build/CMakeFiles/AI_BMT_GUI_Submitter.dir/main.cpp.o"
 }
